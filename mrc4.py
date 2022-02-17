@@ -1,27 +1,8 @@
+import struct
+
 key = None
 
 #-----UTILITIES-----
-def str2bin(text):
-# Mengkonversi string menjadi string biner
-    if type(text) == str:
-        return ''.join(format(ord(i), '08b') for i in text)
-    return
-
-def binstr2bin(binstr):
-# Mengkonversi string biner menjadi biner
-    in_bytes = bytes('', 'utf-8')
-    split8 = [binstr[i:i+8] for i in range(0, len(binstr), 8)]
-    for byte in split8:
-        in_bytes += struct.pack('B', int(byte, 2))
-    return in_bytes
-
-def file2binstr(path):
-# Mengkonversi file menjadi string biner
-    file = open(path, 'rb')
-    content = file.read()
-    file.close()
-    return ''.join([format(i, "08b") for i in content])
-
 def str_to_ints(input_text: str):
 # Mengkonversi string menjadi list of integer
     return [ord(char) for char in input_text]
@@ -32,39 +13,6 @@ def str_to_strbinaries(input_text: str) -> str:
     for char in input_text:
         result += format(ord(char), "08b")
     return "".join(result)
-
-def strbinaries_to_char(content) -> str:
-# Mengkonversi list of string yang merepresentasikan biner ke string
-    result = ""
-    for i in range(len(content)//8):
-        byte = content[i*8 : (i+1)*8]
-        result += chr(int(byte, 2))
-    return result
-
-def cr4_convert_char_to_binstr(content):
-# Mengkonversi string text menjadi list of string yang merepresentasikan biner setiap karakter dari string text
-    result = []
-    for char in content:
-        result.append(format(ord(char), "08b"))
-    return result
-
-def readfile_txt(filename: str = "plaintext.txt"):
-# Membaca file menjadi string
-    from pathlib import Path
-
-    path = filename
-    
-    with open(path, "r") as file:
-        return file.readlines()
-
-def writefile_txt(filename: str="output.txt", content:str=""):
-# Menulis string ke dalam file
-    from pathlib import Path
-
-    path = filename
-
-    with open(path, 'wb') as file:
-        file.write(content)
 
 def readfile_bin(filename: str = "blue.png"):
 # Membaca file menjadi biner
@@ -100,13 +48,6 @@ def writefile_bin(filename: str="output.png", content: str=""):
             bytes.append(byte)
         file.write(b"".join(bytes))
 
-def savefile(content, filename, ext):
-    path = "output_decode/" + filename + "." + ext
-    file = open(path, 'wb')
-    file.write(content)
-    file.close 
-
-
 #-----MODIFIED RC4-----
 def acquire_key(input_key):
     global key
@@ -121,60 +62,8 @@ def xor_message(message: str, keystream) -> str:
         result += chr(message_ints[idx] ^ keystream[idx%n_keystream])
     return result
 
-def cr4_encrypt_message(message):
-# Melakukan enkripsi dengan modified RC4
-    global key
-    
-    message_text = strbinaries_to_char(message)
-    
-    enc_message_text = encrypt_text(message_text)
-    
-    enc_message = str_to_strbinaries(enc_message_text)
-    
-    return enc_message
-
-def cr4_decrypt_file(filename, extension):
-# Membaca file dan melakukan dekripsi dengan modified RC4   
-    path = "output_decode/" + filename + "." + extension
-    content_binstr = file2binstr(path)
-
-    content_text = strbinaries_to_char(content_binstr)
-
-    content_text = decrypt_text(content_text)
-
-    decr_content = binstr2bin(str2bin(content_text))
-
-    savefile(decr_content, filename, extension)
-
-def feistel(input_message: str, input_key: str, encrypt: bool, num_of_steps: int = 25) -> str:
-# Melakukan enkripsi dengan algoritma feistel cipher
-    n_message_part = len(input_message)//2
-    n_key = len(input_key)
-    if num_of_steps != 0:
-        n_key_part = n_key//num_of_steps
-    subpart1 = input_message[:n_message_part]
-    subpart2 = input_message[n_message_part:]
-
-    if encrypt:
-        iterate_key = range(num_of_steps)
-    else:
-        iterate_key = range(num_of_steps)[::-1]
-
-    for i in iterate_key:
-        subkey_i = input_key[i*n_key_part:(i+1)*n_key_part]
-
-        keystream_i = lfsr_txt(subpart2, subkey_i)
-        func_result = xor_message(subpart2, keystream_i)
-
-        xor_result = xor_message(subpart1, str_to_ints(func_result))
-        
-        subpart1, subpart2 = subpart2, xor_result
-        
-    subpart1, subpart2 = subpart2, subpart1
-    return subpart1 + subpart2
-
-def lfsr_txt(input_message: str, subkey: str):
-# Membentuk keystream dengan algoritma linear shift register key
+def lfsr(input_message: str, subkey: str):
+# Membentuk keystream dengan algoritma linear feedback register key
     def xor_bits(bits):
         result = 0
         for bit in bits:
@@ -183,7 +72,6 @@ def lfsr_txt(input_message: str, subkey: str):
     
     n_input_message = len(input_message)
     register = [1 if bit == "1" else 0 for bit in subkey]
-    
     keystream = []
     i = 0
     while i < n_input_message:
@@ -207,7 +95,7 @@ def KSA(key: str):
     return temp
 
 def encrypt_text(P: str) -> str:
-# Melakukan enkripsi plaintext sesuai array permutasi berdasarkan algoritma RC4, kemudian dilanjutkan enkripsi dengan algoritma feistel
+# Melakukan enkripsi plaintext sesuai array permutasi berdasarkan algoritma RC4, kemudian hasil eknripsi dikenakan XOR dan LFSR
     global key
     S = KSA(key)
     i = j = 0
@@ -220,17 +108,14 @@ def encrypt_text(P: str) -> str:
         u = S[t] 
         c_bytes = u ^ ord(P[idx])
         C += chr(c_bytes)
-    
-    C = feistel(C, str_to_strbinaries(key), encrypt=True)
-    return C
+
+    return xor_message(C, lfsr(C,S))
 
 def decrypt_text(C: str) -> str:
-# Melakukan deskripsi dengan algoritma feister, kemudian dilanjutkan dengan dekripsi sesuai array permutasi berdasarkan algoritma RC4
+# Melakukan deskripsi menggunakan XOR dan LFSR, kemudian dilanjutkan dengan dekripsi sesuai array permutasi berdasarkan algoritma RC4
     global key
     S = KSA(key)
-
-    C = feistel(C, str_to_strbinaries(key), encrypt=False)
-
+    C = xor_message(C, lfsr(C,S))
     i = j = 0
     P = ""
     for idx in range(len(C)):
