@@ -4,8 +4,6 @@ from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QDialog, QApplication, QStackedWidget, QFileDialog
 from mrc4 import *
 
-import cv2
-
 #-----UTILITIES-----
 def goBack():
     # widget.setCurrentIndex(widget.currentIndex() - 1)
