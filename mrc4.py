@@ -92,6 +92,20 @@ def KSA(key: str):
     for i in range(256):
         j = (j + temp[i] + int(key[i%lk])) % 256
         temp[i], temp[j] = temp[j], temp[i]
+    
+    scrambleAgain = [i for i in range(lk)]
+    for i in range(256):
+        j = ((j+temp[i]) ^ (ord(key[i%lk])+scrambleAgain[i%lk])) % 256
+        temp[i], temp[j] = temp[j], temp[i]
+    
+    scrambleMore = [i for i in range(lk+10)]
+    for i in range(256):
+        j = ((j+temp[i]) ^ (ord(key[i%lk])+scrambleMore[i%lk+10])) % 256
+        if (j%2 == 0 and temp[i]%2 == 0):
+            j = (int((j+temp[i])/2 + 50)) % 256
+        else:
+            j = (int((j+temp[i])//2 + 25)) % 256
+        temp[i], temp[j] = temp[j], temp[i]
     return temp
 
 def encrypt_text(P: str) -> str:
