@@ -108,13 +108,16 @@ def encrypt_text(P: str) -> str:
         u = S[t] 
         c_bytes = u ^ ord(P[idx])
         C += chr(c_bytes)
-
-    return xor_message(C, lfsr(C,S))
+    # Hasil dari RC4 dikenakan XOR dan LFSR
+    C = xor_message(C, lfsr(C,S))
+    
+    return C
 
 def decrypt_text(C: str) -> str:
 # Melakukan deskripsi menggunakan XOR dan LFSR, kemudian dilanjutkan dengan dekripsi sesuai array permutasi berdasarkan algoritma RC4
     global key
     S = KSA(key)
+    # Melakukan XOR dan LFSR pada text masukkan
     C = xor_message(C, lfsr(C,S))
     i = j = 0
     P = ""
